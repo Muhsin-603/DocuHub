@@ -10,6 +10,7 @@ This folder contains UX designs for the Merge PDF feature.
 
   #upload
 <img width="393" height="736" alt="Merge PDF – Upload" src="https://github.com/user-attachments/assets/bd7a5017-066b-44db-8ae5-dd716760c58f" />
+<br>
 #files-selected
 <img width="393" height="736" alt="Merge PDFs – Files Selected" src="https://github.com/user-attachments/assets/6d1b4a15-df3b-48cb-99e5-44ac3ad3ace8" />
 #reorder-files
