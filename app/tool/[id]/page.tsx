@@ -9,6 +9,22 @@ export default function ToolUploadPage() {
     const router = useRouter();
     const params = useParams();
     const toolId = params.id;
+    const getToolTitle = () => {
+        switch (toolId) {
+            case "file-conversion":
+                return "Upload document to convert";
+            case "ocr":
+                return "Upload image for text extraction";
+            case "data-tools":
+                return "Upload data file to process";
+            default:
+                return "Upload your file";
+        }
+    };
+
+
+
+
 
     // PDF Tools page
     if (toolId === "pdf-tools") {
@@ -83,8 +99,9 @@ export default function ToolUploadPage() {
             <main className="flex-1 container mx-auto px-6 py-12 md:px-12">
                 <div className="mb-12">
                     <h1 className="text-3xl font-semibold text-[#1e1e2e] tracking-tight mb-2">
-                        Upload your file
+                        {getToolTitle()}
                     </h1>
+
                 </div>
 
                 <div className="w-full max-w-5xl">
