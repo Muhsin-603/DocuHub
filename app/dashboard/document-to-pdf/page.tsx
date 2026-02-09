@@ -47,6 +47,7 @@ export default function DocumentToPdfPage() {
     setFiles([]);
     setError("");
   };
+  const [isDragging, setIsDragging] = useState(false); // ✅ NEW
 
   const handleConvert = async () => {
     if (!files[0]) return;
@@ -65,6 +66,9 @@ export default function DocumentToPdfPage() {
     try {
       let text = "";
 
+      console.log("Processing:", file.name);
+
+      // DOCX Support
       if (file.name.toLowerCase().endsWith(".docx")) {
         const arrayBuffer = await file.arrayBuffer();
         const result = await mammoth.extractRawText({ arrayBuffer });
@@ -75,6 +79,15 @@ export default function DocumentToPdfPage() {
 
       if (!text.trim()) throw new Error("No readable text");
 
+        console.log("Text file detected");
+        text = await file.text();
+      }
+
+      if (!text || text.trim().length === 0) {
+        throw new Error("No readable text found in file");
+      }
+
+      // Create PDF
       const pdfDoc = await PDFDocument.create();
       const page = pdfDoc.addPage([595, 842]);
 
@@ -207,6 +220,55 @@ export default function DocumentToPdfPage() {
       <br />
 
       <button onClick={handleConvert} disabled={loading || !!error}>
+      {/* ✅ NEW DRAG + DROP AREA */}
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => {
+          setIsDragging(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+
+          if (e.dataTransfer.files) {
+            setFiles(Array.from(e.dataTransfer.files));
+          }
+        }}
+        style={{
+          border: isDragging ? "2px solid #4f46e5" : "2px dashed #aaa",
+          background: isDragging ? "#eef2ff" : "transparent",
+          padding: "40px",
+          textAlign: "center",
+          borderRadius: "10px",
+          transition: "all 0.2s ease",
+          cursor: "pointer",
+          marginTop: "20px"
+        }}
+      >
+        <input
+          type="file"
+          accept=".txt,.html,.json,.docx"
+          onChange={(e) => {
+            if (!e.target.files) return;
+            setFiles(Array.from(e.target.files));
+          }}
+          style={{ display: "none" }}
+          id="fileUpload"
+        />
+
+        <label htmlFor="fileUpload" style={{ cursor: "pointer" }}>
+          {isDragging
+            ? "Drop file here 📂"
+            : "Drag & drop file here OR Click to select"}
+        </label>
+      </div>
+
+      <br />
+
+      <button onClick={handleConvert} disabled={loading}>
         {loading ? "Converting..." : "Convert to PDF"}
       </button>
     </div>
