@@ -77,12 +77,6 @@ export default function DocumentToPdfPage() {
         text = await file.text();
       }
 
-      if (!text.trim()) throw new Error("No readable text");
-
-        console.log("Text file detected");
-        text = await file.text();
-      }
-
       if (!text || text.trim().length === 0) {
         throw new Error("No readable text found in file");
       }
