@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowLeft, FileText, Upload } from "lucide-react";
 import { ToolCard } from "@/components/ToolCard";
 import { useParams, useRouter } from "next/navigation";
@@ -14,6 +13,7 @@ export default function ToolUploadPage() {
 
     const [hasUnsavedWork, setHasUnsavedWork] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [fileError, setFileError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     // Warn on refresh / tab close
@@ -43,9 +43,39 @@ export default function ToolUploadPage() {
         }
     };
 
+    const getSupportedTypes = () => {
+        switch (toolId) {
+            case "document-to-pdf":
+                return [".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"];
+            case "ocr":
+                return [".jpg", ".jpeg", ".png"];
+            case "pdf-tools":
+            case "pdf-merge":
+            case "pdf-split":
+            case "pdf-protect":
+            case "pdf-redact":
+                return [".pdf"];
+            default:
+                return [];
+        }
+    };
+
     const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        const allowedTypes = getSupportedTypes();
+        const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+
+        if (allowedTypes.length && !allowedTypes.includes(fileExtension)) {
+            setFileError(
+                `Unsupported file type. Please upload ${allowedTypes.join(", ")} file(s).`
+            );
+            e.target.value = "";
+            return;
+        }
+
+        setFileError(null);
         setSelectedFile(file);
         setHasUnsavedWork(true);
     };
@@ -85,47 +115,12 @@ export default function ToolUploadPage() {
                     </div>
 
                     <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
-    <ToolCard
-        icon={FileText}
-        title="Merge PDF"
-        description="Combine multiple PDFs into one"
-        href="/dashboard/pdf-merge"
-        disabled={false}
-    />
-
-    <ToolCard
-        icon={FileText}
-        title="Split PDF"
-        description="Split PDF into separate pages"
-        href="/dashboard/pdf-split"
-        disabled={false}
-    />
-
-    <ToolCard
-        icon={FileText}
-        title="Document to PDF"
-        description="Convert documents into PDF format"
-        href="/dashboard/document-to-pdf"
-        disabled={false}
-    />
-
-    <ToolCard
-        icon={FileText}
-        title="Protect PDF"
-        description="Secure your PDF with a password"
-        href="/dashboard/pdf-protect"
-        disabled={false}
-    />
-
-    <ToolCard
-        icon={FileText}
-        title="Redact PDF"
-        description="Remove sensitive information from your PDF"
-        href="/dashboard/pdf-redact"
-        disabled={false}
-    />
-</div>
-
+                        <ToolCard icon={FileText} title="Merge PDF" description="Combine multiple PDFs into one" href="/dashboard/pdf-merge" />
+                        <ToolCard icon={FileText} title="Split PDF" description="Split PDF into separate pages" href="/dashboard/pdf-split" />
+                        <ToolCard icon={FileText} title="Document to PDF" description="Convert documents into PDF format" href="/dashboard/document-to-pdf" />
+                        <ToolCard icon={FileText} title="Protect PDF" description="Secure your PDF with a password" href="/dashboard/pdf-protect" />
+                        <ToolCard icon={FileText} title="Redact PDF" description="Remove sensitive information from your PDF" href="/dashboard/pdf-redact" />
+                    </div>
                 </main>
             </div>
         );
@@ -170,6 +165,12 @@ export default function ToolUploadPage() {
                         </label>
                     </motion.div>
 
+                    {fileError && (
+                        <p className="mt-3 text-sm text-red-600">
+                            {fileError}
+                        </p>
+                    )}
+
                     {selectedFile && (
                         <div className="mt-4 flex items-center justify-between rounded-lg border bg-white px-4 py-3 text-sm">
                             <div>
@@ -192,6 +193,16 @@ export default function ToolUploadPage() {
                             </button>
                         </div>
                     )}
+
+                    <div className="flex justify-between text-xs text-muted-foreground mt-4 px-1">
+                        <span>
+                            Supported formats:{" "}
+                            {getSupportedTypes().length > 0
+                                ? getSupportedTypes().join(", ")
+                                : "See tool requirements"}
+                        </span>
+                        <span>Max file size: 10MB</span>
+                    </div>
                 </div>
             </main>
         </div>
