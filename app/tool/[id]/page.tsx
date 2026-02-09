@@ -13,139 +13,9 @@ import { ToolCard } from "@/components/ToolCard";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { storeFile } from "@/lib/fileStore";
 
-// In-memory fallback for large files that can't fit in sessionStorage
-let inMemoryFile: { data: string; name: string; type: string } | null = null;
-
-export function getStoredFile() {
-  // Try sessionStorage first
-  const sessionData = sessionStorage.getItem("ocrFile");
-  if (sessionData) {
-    return {
-      data: sessionData,
-      name: sessionStorage.getItem("ocrFileName") || "file",
-      type: sessionStorage.getItem("ocrFileType") || "image/png",
-    };
-  }
-  // Fall back to in-memory
-  return inMemoryFile;
-}
-
-export function clearStoredFile() {
-  sessionStorage.removeItem("ocrFile");
-  sessionStorage.removeItem("ocrFileName");
-  sessionStorage.removeItem("ocrFileType");
-  inMemoryFile = null;
-}
-
-// Compress image using canvas
-async function compressImage(
-  file: File,
-  maxSizeMB: number = 4
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let { width, height } = img;
-
-        // Calculate target dimensions while maintaining aspect ratio
-        const maxDimension = 2048; // Max width/height
-        if (width > maxDimension || height > maxDimension) {
-          if (width > height) {
-            height = (height / width) * maxDimension;
-            width = maxDimension;
-          } else {
-            width = (width / height) * maxDimension;
-            height = maxDimension;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Could not get canvas context"));
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Start with high quality and reduce if needed
-        let quality = 0.9;
-        let dataUrl = canvas.toDataURL("image/jpeg", quality);
-
-        // Reduce quality until under maxSizeMB
-        const maxBytes = maxSizeMB * 1024 * 1024;
-        while (dataUrl.length > maxBytes && quality > 0.1) {
-          quality -= 0.1;
-          dataUrl = canvas.toDataURL("image/jpeg", quality);
-        }
-
-        resolve(dataUrl);
-      };
-      img.onerror = () => reject(new Error("Failed to load image"));
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsDataURL(file);
-  });
-}
-
-// Store file with compression fallback
-async function storeFile(file: File): Promise<boolean> {
-  const maxSessionStorageSize = 4 * 1024 * 1024; // 4MB to be safe
-
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-
-      // If small enough, store directly
-      if (dataUrl.length < maxSessionStorageSize) {
-        try {
-          sessionStorage.setItem("ocrFile", dataUrl);
-          sessionStorage.setItem("ocrFileName", file.name);
-          sessionStorage.setItem("ocrFileType", file.type);
-          resolve(true);
-          return;
-        } catch {
-          // Continue to compression
-        }
-      }
-
-      // Try compressing if it's an image
-      if (file.type.startsWith("image/")) {
-        try {
-          const compressedDataUrl = await compressImage(file);
-
-          if (compressedDataUrl.length < maxSessionStorageSize) {
-            sessionStorage.setItem("ocrFile", compressedDataUrl);
-            sessionStorage.setItem("ocrFileName", file.name);
-            sessionStorage.setItem("ocrFileType", "image/jpeg");
-            resolve(true);
-            return;
-          }
-        } catch (err) {
-          console.warn("Compression failed:", err);
-        }
-      }
-
-      // Fall back to in-memory storage
-      inMemoryFile = {
-        data: dataUrl,
-        name: file.name,
-        type: file.type,
-      };
-      resolve(true);
-    };
-    reader.onerror = () => resolve(false);
-    reader.readAsDataURL(file);
-  });
-}
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export default function ToolUploadPage() {
   const router = useRouter();
@@ -213,6 +83,14 @@ export default function ToolUploadPage() {
       return;
     }
 
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError(
+        `File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max allowed: 10MB.`
+      );
+      e.target.value = "";
+      return;
+    }
+
     setFileError(null);
     setSelectedFile(file);
     setHasUnsavedWork(true);
@@ -237,12 +115,18 @@ export default function ToolUploadPage() {
     if (!file) return;
 
     const allowedTypes = getSupportedTypes();
-    const extension =
-      "." + file.name.split(".").pop()?.toLowerCase();
+    const extension = "." + file.name.split(".").pop()?.toLowerCase();
 
     if (allowedTypes.length && !allowedTypes.includes(extension)) {
       setFileError(
         `Unsupported file type. Allowed: ${allowedTypes.join(", ")}`
+      );
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError(
+        `File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max allowed: 10MB.`
       );
       return;
     }

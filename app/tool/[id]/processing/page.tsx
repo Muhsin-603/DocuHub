@@ -4,7 +4,7 @@ import { Loader2, Lock, CheckCircle, AlertCircle, Download, Copy } from "lucide-
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Tesseract from "tesseract.js";
-import { getStoredFile, clearStoredFile } from "../page";
+import { getStoredFile, clearStoredFile } from "@/lib/fileStore";
 
 export default function ProcessingPage() {
   const router = useRouter();
